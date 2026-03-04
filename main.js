@@ -34,30 +34,34 @@ scene.add(new THREE.AmbientLight(0x222222));
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
 scene.add(ambientLight);
 
-// const atmGeo = new THREE.SphereGeometry(1.08, 64, 64);
-// const atmMat = new THREE.MeshPhongMaterial({
-//   color: 0x4488ff,
-//   transparent: true,
-//   opacity: 0.08,
-//   side: THREE.FrontSide,
-// });
-// scene.add(new THREE.Mesh(atmGeo, atmMat));
-
 
 // Pendule
-const penduleGeometry = new THREE.SphereGeometry(0.05, 32, 32);
-const penduleMaterial = new THREE.MeshStandardMaterial({
-  color: 0x888888,       // gris moyen
-  metalness: 1.0,        // 0 = plastique, 1 = métal pur
-  roughness: 0.3,        // 0 = miroir, 1 = totalement mat
-});
-const penduleMesh = new THREE.Mesh(penduleGeometry, penduleMaterial);
-penduleMesh.position.set(1.2, 0, 0); // Position initiale du pendule
-scene.add(penduleMesh);
+const wireGeometry = new THREE.CylinderGeometry(0.005, 0.005, 0.5, 8);
+const wireMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 1.0, roughness: 0.3 });
+const wire = new THREE.Mesh(wireGeometry, wireMaterial);
+wire.position.y = -1;
+
+const bobGeometry = new THREE.SphereGeometry(0.08, 32, 32);
+const bobMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 1.0, roughness: 0.3 });
+const bob = new THREE.Mesh(bobGeometry, bobMaterial);
+bob.position.y = -1.25;
+
+const pivotGroup = new THREE.Group();
+pivotGroup.add(wire);
+pivotGroup.add(bob);
+pivotGroup.position.y = 2.25;
+pivotGroup.position.x = 0;
+scene.add(pivotGroup);
+
+let angle = 0;
 
 function animate() {
   requestAnimationFrame(animate);
-  earthMesh.rotation.y += 0.001;   // rotation lente de la Terre
+  earthMesh.rotation.y += 0.001;
+
+  angle += 0.02;
+  pivotGroup.rotation.x = Math.sin(angle) * 0.3;
+
   controls.update();
   renderer.render(scene, camera);
 }
