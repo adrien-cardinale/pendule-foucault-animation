@@ -14,6 +14,7 @@ const latitudeSlider = document.getElementById('latitude-slider');
 const latitudeValue = document.getElementById('latitude-value');
 const longitudeSlider = document.getElementById('longitude-slider');
 const longitudeValue = document.getElementById('longitude-value');
+const lockCameraRotationCheckbox = document.getElementById('lock-camera-rotation');
 
 const pendulumLength = 3;
 const anchorOffsetAboveSurface = pendulumLength + 0.4;
@@ -23,6 +24,9 @@ scene.add(pendulumRoot);
 const clock = new THREE.Clock();
 const maxAngle = THREE.MathUtils.degToRad(14);
 const oscillationSpeed = 1.4;
+const earthSpinSpeed = 0.0015;
+
+let lockCameraToEarthRotation = Boolean(lockCameraRotationCheckbox?.checked);
 
 let latitude = Number(latitudeSlider?.value ?? 47);
 let longitude = Number(longitudeSlider?.value ?? 0);
@@ -59,6 +63,15 @@ if (longitudeSlider) {
     updateControlLabels();
   });
 }
+
+if (lockCameraRotationCheckbox) {
+  lockCameraRotationCheckbox.addEventListener('change', (event) => {
+    lockCameraToEarthRotation = event.target.checked;
+    controls.enabled = !lockCameraToEarthRotation;
+  });
+}
+
+controls.enabled = !lockCameraToEarthRotation;
 
 updateControlLabels();
 
@@ -99,6 +112,8 @@ animateScene({
   pendulumPivot,
   maxAngle,
   oscillationSpeed,
+  earthSpinSpeed,
+  shouldLockCamera: () => lockCameraToEarthRotation,
   onFrame: updatePendulumPlacement,
   controls,
   renderer,
