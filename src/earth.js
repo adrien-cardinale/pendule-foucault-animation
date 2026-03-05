@@ -20,7 +20,7 @@ export function createEarth(earthRadius = 6) {
   );
 
   const northPoleMarker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 16, 16),
+    new THREE.SphereGeometry(0.02, 16, 16),
     new THREE.MeshBasicMaterial({ color: 0xff5555 })
   );
   northPoleMarker.position.set(0, earthRadius, 0);

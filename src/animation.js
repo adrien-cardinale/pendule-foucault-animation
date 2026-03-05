@@ -8,6 +8,7 @@ export function animateScene({
   oscillationSpeed,
   earthSpinSpeed,
   shouldLockCamera,
+  onLockedCameraUpdate,
   onFrame,
   controls,
   renderer,
@@ -21,18 +22,22 @@ export function animateScene({
 
     const t = clock.getElapsedTime();
 
+    earth.rotation.y += earthSpinSpeed;
+
     if (onFrame) {
       onFrame(t);
     }
 
     pendulumPivot.rotation.z = Math.sin(t * oscillationSpeed) * maxAngle;
 
-    earth.rotation.y += earthSpinSpeed;
-
     if (shouldLockCamera?.()) {
-      camera.position.applyAxisAngle(rotationAxis, earthSpinSpeed);
-      camera.up.applyAxisAngle(rotationAxis, earthSpinSpeed);
-      camera.lookAt(0, 0, 0);
+      if (onLockedCameraUpdate) {
+        onLockedCameraUpdate();
+      } else {
+        camera.position.applyAxisAngle(rotationAxis, earthSpinSpeed);
+        camera.up.applyAxisAngle(rotationAxis, earthSpinSpeed);
+        camera.lookAt(0, 0, 0);
+      }
     }
 
     if (controls.enabled) {

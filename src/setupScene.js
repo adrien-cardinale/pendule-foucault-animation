@@ -19,7 +19,7 @@ export function createSceneContext() {
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
   scene.add(ambientLight);
 
-  const sunLight = new THREE.DirectionalLight(0xffffff, 1.6);
+  const sunLight = new THREE.DirectionalLight(0xffffff, 8);
   sunLight.position.set(10, 6, 8);
   scene.add(sunLight);
 

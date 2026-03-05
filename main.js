@@ -17,6 +17,10 @@ const latitudeValue = document.getElementById('latitude-value');
 const longitudeSlider = document.getElementById('longitude-slider');
 const longitudeValue = document.getElementById('longitude-value');
 const lockCameraRotationCheckbox = document.getElementById('lock-camera-rotation');
+const resetYverdonButton = document.getElementById('reset-yverdon-button');
+
+const yverdonLatitude = 46.7785;
+const yverdonLongitude = 6.6412;
 
 const pendulumLength = 3;
 const anchorOffsetAboveSurface = pendulumLength + 0.4;
@@ -41,15 +45,37 @@ const worldNormal = new THREE.Vector3();
 const worldTangent = new THREE.Vector3();
 const worldBinormal = new THREE.Vector3();
 const basisMatrix = new THREE.Matrix4();
+const lockedCameraPosition = new THREE.Vector3();
+const cameraViewDirection = new THREE.Vector3();
+const cameraUpVector = new THREE.Vector3();
+
+const cameraOffsetNormal = 5;
+const cameraOffsetTangent = 0;
+const cameraOffsetBinormal = 0.5;
 
 function updateControlLabels() {
   if (latitudeValue) {
-    latitudeValue.textContent = `${Math.round(latitude)}°`;
+    latitudeValue.textContent = `${latitude.toFixed(2)}°`;
   }
 
   if (longitudeValue) {
-    longitudeValue.textContent = `${Math.round(longitude)}°`;
+    longitudeValue.textContent = `${longitude.toFixed(2)}°`;
   }
+}
+
+function setCoordinates(nextLatitude, nextLongitude) {
+  latitude = nextLatitude;
+  longitude = nextLongitude;
+
+  if (latitudeSlider) {
+    latitudeSlider.value = String(nextLatitude);
+  }
+
+  if (longitudeSlider) {
+    longitudeSlider.value = String(nextLongitude);
+  }
+
+  updateControlLabels();
 }
 
 if (latitudeSlider) {
@@ -73,13 +99,19 @@ if (lockCameraRotationCheckbox) {
   });
 }
 
+if (resetYverdonButton) {
+  resetYverdonButton.addEventListener('click', () => {
+    setCoordinates(yverdonLatitude, yverdonLongitude);
+  });
+}
+
 controls.enabled = !lockCameraToEarthRotation;
 
 updateControlLabels();
 
 function updatePendulumPlacement() {
   const latitudeRad = THREE.MathUtils.degToRad(latitude);
-  const longitudeRad = THREE.MathUtils.degToRad(longitude);
+  const longitudeRad = THREE.MathUtils.degToRad(-longitude);
   const cosLat = Math.cos(latitudeRad);
 
   localNormal.set(
@@ -106,6 +138,27 @@ function updatePendulumPlacement() {
   northPoleMarker.position.copy(worldNormal).multiplyScalar(earthRadius);
 }
 
+function updateLockedCameraFromPendulum() {
+  lockedCameraPosition
+    .copy(pendulumRoot.position)
+    .addScaledVector(worldNormal, cameraOffsetNormal)
+    .addScaledVector(worldTangent, cameraOffsetTangent)
+    .addScaledVector(worldBinormal, cameraOffsetBinormal);
+
+  camera.position.copy(lockedCameraPosition);
+
+  cameraViewDirection.copy(pendulumRoot.position).sub(lockedCameraPosition).normalize();
+  cameraUpVector.copy(worldNormal);
+
+  if (Math.abs(cameraViewDirection.dot(cameraUpVector)) > 0.95) {
+    cameraUpVector.copy(worldBinormal);
+  }
+
+  camera.up.copy(cameraUpVector).normalize();
+  camera.lookAt(pendulumRoot.position);
+  controls.target.copy(pendulumRoot.position);
+}
+
 attachResize(camera, renderer);
 
 animateScene({
@@ -116,6 +169,7 @@ animateScene({
   oscillationSpeed,
   earthSpinSpeed,
   shouldLockCamera: () => lockCameraToEarthRotation,
+  onLockedCameraUpdate: updateLockedCameraFromPendulum,
   onFrame: updatePendulumPlacement,
   controls,
   renderer,
