@@ -1,13 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Pendule de Foucault Animation</title>
-    <style>
-      body { margin: 0; }
-    </style>
-  </head>
-  <body>
-    <script type="module" src="/main.js"></script>
-  </body>
+
+<head>
+  <meta charset="utf-8">
+  <title>Pendule de Foucault Animation</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    .controls {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-size: 14px;
+    }
+
+    .controls label {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .controls input {
+      width: 220px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="controls">
+    <label for="latitude-slider">Latitude: <span id="latitude-value">45°</span></label>
+    <input id="latitude-slider" type="range" min="0" max="180" step="1" value="45">
+    <label for="time-scale-slider">Time scale: <span id="time-scale-value">1x</span></label>
+    <div style="display: flex; align-items: center; gap: 2px;">
+      <label for="lock-camera-checkbox">Lock camera to pendulum coordinates</label>
+      <input id="lock-camera-checkbox" type="checkbox" checked>
+    </div>
+    <label for="time-display">Time: <span id="time-display">00:00:00</span></label>
+  </div>
+  <script type="module" src="/main.js"></script>
+</body>
+
 </html>

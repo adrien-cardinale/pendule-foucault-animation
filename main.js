@@ -7,15 +7,36 @@ camera.position.z = 10;
 camera.position.x = 30;
 
 const cameraFollowsEarthRotation = true;
+let cameraLockedToPendulumCoordinates = true;
+const cameraOffsetFromAnchor = 6;
+const cameraLatitudeOffset = 2;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
+const latitudeSlider = document.getElementById('latitude-slider');
+const latitudeValue = document.getElementById('latitude-value');
+const lockCameraCheckbox = document.getElementById('lock-camera-checkbox');
+const timeDisplay = document.getElementById('time-display');
+
+if (lockCameraCheckbox) {
+  cameraLockedToPendulumCoordinates = lockCameraCheckbox.checked;
+}
+
+controls.enabled = !cameraLockedToPendulumCoordinates;
+
+if (lockCameraCheckbox) {
+  lockCameraCheckbox.addEventListener('change', (event) => {
+    const isChecked = event.target.checked;
+    cameraLockedToPendulumCoordinates = isChecked;
+    controls.enabled = !cameraLockedToPendulumCoordinates;
+  });
+}
 
 const textureLoader = new THREE.TextureLoader();
-const earthNightMapUrl = new URL('./textures/8k_earth_nightmap.jpg', import.meta.url).href;
+const earthNightMapUrl = new URL('./textures/8k_earth_daymap.jpg', import.meta.url).href;
 const earthNormalMapUrl = new URL('./textures/earth_normal.png', import.meta.url).href;
 const earthSpecularMapUrl = new URL('./textures/earth_specular.png', import.meta.url).href;
 
@@ -95,6 +116,7 @@ const orbitalNormalAxis = createDashedAxisLine(new THREE.Vector3(0, 1, 0), 0x00f
 const earthRotationAxisDirection = new THREE.Vector3(0, 1, 0).applyAxisAngle(new THREE.Vector3(0, 0, 1), earthTilt);
 const earthRotationAxis = createDashedAxisLine(earthRotationAxisDirection, 0xff0000);
 const earthSpinSpeed = 0.001;
+const secondsPerDay = 24 * 60 * 60;
 
 scene.add(orbitalNormalAxis);
 scene.add(earthRotationAxis);
@@ -105,7 +127,7 @@ sunLight.position.set(5, 3, 5);
 scene.add(sunLight);
 scene.add(new THREE.AmbientLight(0x222222)); 
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
 scene.add(ambientLight);
 
 
@@ -127,6 +149,7 @@ const oscillationPlaneMaterial = new THREE.MeshBasicMaterial({
   opacity: 0.2,
   side: THREE.DoubleSide,
   depthWrite: false,
+  depthTest: true,
 });
 const oscillationPlane = new THREE.Mesh(oscillationPlaneGeometry, oscillationPlaneMaterial);
 
@@ -137,39 +160,131 @@ pendulumGroup.add(bob);
 pivotGroup.add(pendulumGroup);
 pivotGroup.add(oscillationPlane);
 
-let latitude = 45;
+let latitude = 46.78;
+const fixedLongitude = -6.641;
 
 let pivotDistance = 10.1;
-let pivotPosition = THREE.MathUtils.degToRad(latitude);
+let latitudeRad = THREE.MathUtils.degToRad(latitude);
+const longitudeRad = THREE.MathUtils.degToRad(fixedLongitude);
 
 const surfaceNormal = new THREE.Vector3();
-const surfacePointLocal = new THREE.Vector3(
-  Math.sin(pivotPosition) * pivotDistance,
-  Math.cos(pivotPosition) * pivotDistance,
-  0
-);
+const surfacePointLocal = new THREE.Vector3();
 const worldNormal = new THREE.Vector3();
 const worldAnchor = new THREE.Vector3();
 const worldDown = new THREE.Vector3();
 const swingTangent = new THREE.Vector3();
-const projectedReference = new THREE.Vector3();
 const swingDirection = new THREE.Vector3();
 const oscillationPlaneRight = new THREE.Vector3();
 const oscillationPlaneUp = new THREE.Vector3();
 const oscillationPlaneNormal = new THREE.Vector3();
 const oscillationPlaneMatrix = new THREE.Matrix4();
-const fixedReferenceAxis = new THREE.Vector3(1, 0, 0);
-const fallbackReferenceAxis = new THREE.Vector3(0, 0, 1);
+const localNorth = new THREE.Vector3();
+const localEast = new THREE.Vector3();
+const inertialSwingDirection = new THREE.Vector3();
+const projectedInertialDirection = new THREE.Vector3();
+const fallbackReferenceAxis = new THREE.Vector3(1, 0, 0);
 const localPendulumDown = new THREE.Vector3(0, -1, 0);
 let angle = 0;
 
-function updatePivotTransform() {
+function setLatitude(nextLatitude) {
+  latitude = nextLatitude;
+  latitudeRad = THREE.MathUtils.degToRad(latitude);
+
+  updateAnchorLocalVectors();
+  resetInertialSwingDirection();
+
+  if (latitudeValue) {
+    latitudeValue.textContent = `${Math.round(latitude)}°`;
+  }
+}
+
+function resetInertialSwingDirection() {
+  worldAnchor.copy(surfacePointLocal);
+  earth.localToWorld(worldAnchor);
+
+  worldNormal.copy(surfaceNormal).transformDirection(earth.matrixWorld).normalize();
+  localEast.crossVectors(earthRotationAxisDirection, worldNormal);
+  if (localEast.lengthSq() < 1e-8) {
+    localEast.crossVectors(fallbackReferenceAxis, worldNormal);
+  }
+  localEast.normalize();
+
+  localNorth.crossVectors(worldNormal, localEast).normalize();
+  inertialSwingDirection.copy(localNorth);
+}
+
+function updateAnchorLocalVectors() {
+  const sinLat = Math.sin(latitudeRad);
+  const cosLat = Math.cos(latitudeRad);
+  const cosLon = Math.cos(longitudeRad);
+  const sinLon = Math.sin(longitudeRad);
+
   surfaceNormal.set(
-    Math.sin(pivotPosition),
-    Math.cos(pivotPosition),
-    0
+    sinLat * cosLon,
+    cosLat,
+    sinLat * sinLon
   ).normalize();
 
+  surfacePointLocal.set(
+    surfaceNormal.x * pivotDistance,
+    surfaceNormal.y * pivotDistance,
+    surfaceNormal.z * pivotDistance
+  );
+}
+
+setLatitude(latitude);
+
+if (latitudeSlider) {
+  latitudeSlider.addEventListener('input', (event) => {
+    setLatitude(Number(event.target.value));
+  });
+}
+
+const worldNorthAxis = new THREE.Vector3();
+const cameraLatitudeDirection = new THREE.Vector3();
+const projectedNorth = new THREE.Vector3();
+
+function updateCameraFromPendulum() {
+  worldNorthAxis.copy(earthRotationAxisDirection).normalize();
+  projectedNorth
+    .copy(worldNorthAxis)
+    .sub(worldNormal.clone().multiplyScalar(worldNorthAxis.dot(worldNormal)));
+
+  if (projectedNorth.lengthSq() < 1e-8) {
+    cameraLatitudeDirection.copy(swingTangent);
+  } else {
+    cameraLatitudeDirection.copy(projectedNorth).normalize();
+  }
+
+  camera.position.copy(worldAnchor)
+    .addScaledVector(worldNormal, cameraOffsetFromAnchor)
+    .addScaledVector(cameraLatitudeDirection, cameraLatitudeOffset);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(worldAnchor);
+  controls.target.copy(worldAnchor);
+}
+
+function updateSimulatedTimeDisplay() {
+  if (!timeDisplay) {
+    return;
+  }
+
+  const fullRotation = Math.PI * 2;
+  const normalizedRotation = THREE.MathUtils.euclideanModulo(earth.rotation.y, fullRotation) / fullRotation;
+  const totalSeconds = Math.floor(normalizedRotation * secondsPerDay);
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const hh = String(hours).padStart(2, '0');
+  const mm = String(minutes).padStart(2, '0');
+  const ss = String(seconds).padStart(2, '0');
+
+  timeDisplay.textContent = `${hh}:${mm}:${ss}`;
+}
+
+function updatePivotTransform() {
   worldAnchor.copy(surfacePointLocal);
   earth.localToWorld(worldAnchor);
   pivotGroup.position.copy(worldAnchor);
@@ -177,15 +292,21 @@ function updatePivotTransform() {
   worldNormal.copy(surfaceNormal).transformDirection(earth.matrixWorld).normalize();
   worldDown.copy(worldNormal).negate();
 
-  projectedReference.copy(fixedReferenceAxis)
-    .sub(worldNormal.clone().multiplyScalar(fixedReferenceAxis.dot(worldNormal)));
-
-  if (projectedReference.lengthSq() < 1e-8) {
-    projectedReference.copy(fallbackReferenceAxis)
-      .sub(worldNormal.clone().multiplyScalar(fallbackReferenceAxis.dot(worldNormal)));
+  localEast.crossVectors(earthRotationAxisDirection, worldNormal);
+  if (localEast.lengthSq() < 1e-8) {
+    localEast.crossVectors(fallbackReferenceAxis, worldNormal);
   }
+  localEast.normalize();
 
-  swingTangent.copy(projectedReference).normalize();
+  projectedInertialDirection
+    .copy(inertialSwingDirection)
+    .sub(worldNormal.clone().multiplyScalar(inertialSwingDirection.dot(worldNormal)));
+
+  if (projectedInertialDirection.lengthSq() < 1e-8) {
+    swingTangent.copy(localEast);
+  } else {
+    swingTangent.copy(projectedInertialDirection).normalize();
+  }
 
   const currentAngle = Math.sin(angle) * 0.3;
   swingDirection
@@ -211,7 +332,9 @@ function animate() {
   requestAnimationFrame(animate);
   earth.rotation.y += earthSpinSpeed;
 
-  if (cameraFollowsEarthRotation) {
+  updateSimulatedTimeDisplay();
+
+  if (cameraFollowsEarthRotation && !cameraLockedToPendulumCoordinates) {
     camera.position.applyAxisAngle(earthRotationAxisDirection, earthSpinSpeed);
     camera.up.applyAxisAngle(earthRotationAxisDirection, earthSpinSpeed);
   }
@@ -219,7 +342,13 @@ function animate() {
   angle += 0.02;
   updatePivotTransform();
 
-  controls.update();
+  if (cameraLockedToPendulumCoordinates) {
+    updateCameraFromPendulum();
+  }
+
+  if (controls.enabled) {
+    controls.update();
+  }
   renderer.render(scene, camera);
 }
 animate();
