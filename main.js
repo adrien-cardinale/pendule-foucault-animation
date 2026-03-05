@@ -172,16 +172,15 @@ const surfacePointLocal = new THREE.Vector3();
 const worldNormal = new THREE.Vector3();
 const worldAnchor = new THREE.Vector3();
 const worldDown = new THREE.Vector3();
-const swingTangent = new THREE.Vector3();
-const swingDirection = new THREE.Vector3();
-const oscillationPlaneRight = new THREE.Vector3();
-const oscillationPlaneUp = new THREE.Vector3();
-const oscillationPlaneNormal = new THREE.Vector3();
-const oscillationPlaneMatrix = new THREE.Matrix4();
-const localNorth = new THREE.Vector3();
 const localEast = new THREE.Vector3();
 const inertialSwingDirection = new THREE.Vector3();
-const projectedInertialDirection = new THREE.Vector3();
+const swingTangent = new THREE.Vector3();
+const rotatedSwingTangent = new THREE.Vector3();
+const swingDirection = new THREE.Vector3();
+const oscillationPlaneNormal = new THREE.Vector3();
+const oscillationPlaneMatrix = new THREE.Matrix4();
+const projectedDirection = new THREE.Vector3();
+const tangentComponent = new THREE.Vector3();
 const fallbackReferenceAxis = new THREE.Vector3(1, 0, 0);
 const localPendulumDown = new THREE.Vector3(0, -1, 0);
 let angle = 0;
@@ -198,19 +197,33 @@ function setLatitude(nextLatitude) {
   }
 }
 
+function buildLocalEast(normal, out) {
+  out.crossVectors(earthRotationAxisDirection, normal);
+  if (out.lengthSq() < 1e-8) {
+    out.crossVectors(fallbackReferenceAxis, normal);
+  }
+  return out.normalize();
+}
+
+function projectOnTangent(direction, normal, fallbackTangent, out) {
+  out
+    .copy(direction)
+    .addScaledVector(normal, -direction.dot(normal));
+
+  if (out.lengthSq() < 1e-8) {
+    out.copy(fallbackTangent);
+  }
+
+  return out.normalize();
+}
+
 function resetInertialSwingDirection() {
   worldAnchor.copy(surfacePointLocal);
   earth.localToWorld(worldAnchor);
 
   worldNormal.copy(surfaceNormal).transformDirection(earth.matrixWorld).normalize();
-  localEast.crossVectors(earthRotationAxisDirection, worldNormal);
-  if (localEast.lengthSq() < 1e-8) {
-    localEast.crossVectors(fallbackReferenceAxis, worldNormal);
-  }
-  localEast.normalize();
-
-  localNorth.crossVectors(worldNormal, localEast).normalize();
-  inertialSwingDirection.copy(localNorth);
+  buildLocalEast(worldNormal, localEast);
+  inertialSwingDirection.crossVectors(worldNormal, localEast).normalize();
 }
 
 function updateAnchorLocalVectors() {
@@ -240,26 +253,11 @@ if (latitudeSlider) {
   });
 }
 
-const worldNorthAxis = new THREE.Vector3();
-const cameraLatitudeDirection = new THREE.Vector3();
-const projectedNorth = new THREE.Vector3();
-
 function updateCameraFromPendulum() {
-  worldNorthAxis.copy(earthRotationAxisDirection).normalize();
-  projectedNorth
-    .copy(worldNorthAxis)
-    .sub(worldNormal.clone().multiplyScalar(worldNorthAxis.dot(worldNormal)));
-
-  if (projectedNorth.lengthSq() < 1e-8) {
-    cameraLatitudeDirection.copy(swingTangent);
-  } else {
-    cameraLatitudeDirection.copy(projectedNorth).normalize();
-  }
-
   camera.position.copy(worldAnchor)
     .addScaledVector(worldNormal, cameraOffsetFromAnchor)
-    .addScaledVector(cameraLatitudeDirection, cameraLatitudeOffset);
-  camera.up.set(0, 1, 0);
+    .addScaledVector(oscillationPlaneNormal, cameraLatitudeOffset);
+  camera.up.copy(worldNormal).normalize();
   camera.lookAt(worldAnchor);
   controls.target.copy(worldAnchor);
 }
@@ -292,35 +290,33 @@ function updatePivotTransform() {
   worldNormal.copy(surfaceNormal).transformDirection(earth.matrixWorld).normalize();
   worldDown.copy(worldNormal).negate();
 
-  localEast.crossVectors(earthRotationAxisDirection, worldNormal);
-  if (localEast.lengthSq() < 1e-8) {
-    localEast.crossVectors(fallbackReferenceAxis, worldNormal);
-  }
-  localEast.normalize();
+  buildLocalEast(worldNormal, localEast);
+  projectOnTangent(inertialSwingDirection, worldNormal, localEast, swingTangent);
 
-  projectedInertialDirection
-    .copy(inertialSwingDirection)
-    .sub(worldNormal.clone().multiplyScalar(inertialSwingDirection.dot(worldNormal)));
-
-  if (projectedInertialDirection.lengthSq() < 1e-8) {
-    swingTangent.copy(localEast);
+  rotatedSwingTangent.crossVectors(swingTangent, worldNormal);
+  if (rotatedSwingTangent.lengthSq() < 1e-8) {
+    rotatedSwingTangent.copy(swingTangent);
   } else {
-    swingTangent.copy(projectedInertialDirection).normalize();
+    rotatedSwingTangent.normalize();
   }
 
   const currentAngle = Math.sin(angle) * 0.3;
   swingDirection
     .copy(worldDown)
-    .multiplyScalar(Math.cos(currentAngle))
-    .add(swingTangent.clone().multiplyScalar(Math.sin(currentAngle)))
+    .multiplyScalar(Math.cos(currentAngle));
+
+  tangentComponent
+    .copy(rotatedSwingTangent)
+    .multiplyScalar(Math.sin(currentAngle));
+
+  swingDirection
+    .add(tangentComponent)
     .normalize();
 
   pendulumGroup.quaternion.setFromUnitVectors(localPendulumDown, swingDirection);
 
-  oscillationPlaneRight.copy(swingTangent).normalize();
-  oscillationPlaneUp.copy(worldNormal).normalize();
-  oscillationPlaneNormal.crossVectors(oscillationPlaneRight, oscillationPlaneUp).normalize();
-  oscillationPlaneMatrix.makeBasis(oscillationPlaneRight, oscillationPlaneUp, oscillationPlaneNormal);
+  oscillationPlaneNormal.crossVectors(rotatedSwingTangent, worldNormal).normalize();
+  oscillationPlaneMatrix.makeBasis(rotatedSwingTangent, worldNormal, oscillationPlaneNormal);
   oscillationPlane.quaternion.setFromRotationMatrix(oscillationPlaneMatrix);
   oscillationPlane.position.copy(worldDown).multiplyScalar(2.5);
 }
