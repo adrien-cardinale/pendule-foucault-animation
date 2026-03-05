@@ -14,6 +14,38 @@ const controls = new OrbitControls(camera, renderer.domElement);
 
 const textureLoader = new THREE.TextureLoader();
 
+// Fond étoilé
+const starCount = 4000;
+const starRadius = 250;
+const starPositions = new Float32Array(starCount * 3);
+
+for (let i = 0; i < starCount; i += 1) {
+  const radius = starRadius * (0.75 + 0.25 * Math.random());
+  const theta = Math.acos(2 * Math.random() - 1);
+  const phi = 2 * Math.PI * Math.random();
+
+  const x = radius * Math.sin(theta) * Math.cos(phi);
+  const y = radius * Math.cos(theta);
+  const z = radius * Math.sin(theta) * Math.sin(phi);
+
+  starPositions[i * 3] = x;
+  starPositions[i * 3 + 1] = y;
+  starPositions[i * 3 + 2] = z;
+}
+
+const starGeometry = new THREE.BufferGeometry();
+starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+const starMaterial = new THREE.PointsMaterial({
+  color: 0xffffff,
+  size: 0.55,
+  sizeAttenuation: true,
+  transparent: true,
+  opacity: 0.9,
+  depthWrite: false,
+});
+const stars = new THREE.Points(starGeometry, starMaterial);
+scene.add(stars);
+
 // Terre
 const earthGeometry = new THREE.SphereGeometry(8, 64, 64);
 const earthMaterial = new THREE.MeshPhongMaterial({
