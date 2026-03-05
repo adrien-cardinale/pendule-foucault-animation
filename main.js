@@ -181,13 +181,15 @@ const oscillationPlaneNormal = new THREE.Vector3();
 const oscillationPlaneMatrix = new THREE.Matrix4();
 const projectedDirection = new THREE.Vector3();
 const tangentComponent = new THREE.Vector3();
+const candidateLocalEast = new THREE.Vector3();
 const fallbackReferenceAxis = new THREE.Vector3(1, 0, 0);
 const localPendulumDown = new THREE.Vector3(0, -1, 0);
 let angle = 0;
 
 function setLatitude(nextLatitude) {
   latitude = nextLatitude;
-  latitudeRad = THREE.MathUtils.degToRad(latitude);
+  const safeLatitude = THREE.MathUtils.clamp(latitude, 0.1, 179.9);
+  latitudeRad = THREE.MathUtils.degToRad(safeLatitude);
 
   updateAnchorLocalVectors();
   resetInertialSwingDirection();
@@ -198,10 +200,20 @@ function setLatitude(nextLatitude) {
 }
 
 function buildLocalEast(normal, out) {
-  out.crossVectors(earthRotationAxisDirection, normal);
-  if (out.lengthSq() < 1e-8) {
-    out.crossVectors(fallbackReferenceAxis, normal);
+  candidateLocalEast.crossVectors(earthRotationAxisDirection, normal);
+
+  if (candidateLocalEast.lengthSq() < 1e-8) {
+    if (out.lengthSq() < 1e-8) {
+      out.crossVectors(fallbackReferenceAxis, normal);
+    }
+    return out.normalize();
   }
+
+  if (out.lengthSq() > 0 && candidateLocalEast.dot(out) < 0) {
+    candidateLocalEast.negate();
+  }
+
+  out.copy(candidateLocalEast);
   return out.normalize();
 }
 
