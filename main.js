@@ -91,8 +91,6 @@ const oscillationPlaneMaterial = new THREE.MeshBasicMaterial({
   depthWrite: false,
 });
 const oscillationPlane = new THREE.Mesh(oscillationPlaneGeometry, oscillationPlaneMaterial);
-oscillationPlane.rotation.y = Math.PI / 2;
-oscillationPlane.position.y = -1.2;
 
 const pivotGroup = new THREE.Group();
 const pendulumGroup = new THREE.Group();
@@ -101,11 +99,31 @@ pendulumGroup.add(bob);
 pivotGroup.add(pendulumGroup);
 pivotGroup.add(oscillationPlane);
 
+let latitude = 45;
+
 let pivotDistance = 10.1;
-let pivotPosition = 0 - earthTilt; // Position initiale du pendule
+let pivotPosition = THREE.MathUtils.degToRad(latitude);
 
 const surfaceNormal = new THREE.Vector3();
-const localDown = new THREE.Vector3(0, 1, 0);
+const surfacePointLocal = new THREE.Vector3(
+  Math.sin(pivotPosition) * pivotDistance,
+  Math.cos(pivotPosition) * pivotDistance,
+  0
+);
+const worldNormal = new THREE.Vector3();
+const worldAnchor = new THREE.Vector3();
+const worldDown = new THREE.Vector3();
+const swingTangent = new THREE.Vector3();
+const projectedReference = new THREE.Vector3();
+const swingDirection = new THREE.Vector3();
+const oscillationPlaneRight = new THREE.Vector3();
+const oscillationPlaneUp = new THREE.Vector3();
+const oscillationPlaneNormal = new THREE.Vector3();
+const oscillationPlaneMatrix = new THREE.Matrix4();
+const fixedReferenceAxis = new THREE.Vector3(1, 0, 0);
+const fallbackReferenceAxis = new THREE.Vector3(0, 0, 1);
+const localPendulumDown = new THREE.Vector3(0, -1, 0);
+let angle = 0;
 
 function updatePivotTransform() {
   surfaceNormal.set(
@@ -114,14 +132,42 @@ function updatePivotTransform() {
     0
   ).normalize();
 
-  pivotGroup.position.copy(surfaceNormal).multiplyScalar(pivotDistance);
-  pivotGroup.quaternion.setFromUnitVectors(localDown, surfaceNormal);
+  worldAnchor.copy(surfacePointLocal);
+  earth.localToWorld(worldAnchor);
+  pivotGroup.position.copy(worldAnchor);
+
+  worldNormal.copy(surfaceNormal).transformDirection(earth.matrixWorld).normalize();
+  worldDown.copy(worldNormal).negate();
+
+  projectedReference.copy(fixedReferenceAxis)
+    .sub(worldNormal.clone().multiplyScalar(fixedReferenceAxis.dot(worldNormal)));
+
+  if (projectedReference.lengthSq() < 1e-8) {
+    projectedReference.copy(fallbackReferenceAxis)
+      .sub(worldNormal.clone().multiplyScalar(fallbackReferenceAxis.dot(worldNormal)));
+  }
+
+  swingTangent.copy(projectedReference).normalize();
+
+  const currentAngle = Math.sin(angle) * 0.3;
+  swingDirection
+    .copy(worldDown)
+    .multiplyScalar(Math.cos(currentAngle))
+    .add(swingTangent.clone().multiplyScalar(Math.sin(currentAngle)))
+    .normalize();
+
+  pendulumGroup.quaternion.setFromUnitVectors(localPendulumDown, swingDirection);
+
+  oscillationPlaneRight.copy(swingTangent).normalize();
+  oscillationPlaneUp.copy(worldNormal).normalize();
+  oscillationPlaneNormal.crossVectors(oscillationPlaneRight, oscillationPlaneUp).normalize();
+  oscillationPlaneMatrix.makeBasis(oscillationPlaneRight, oscillationPlaneUp, oscillationPlaneNormal);
+  oscillationPlane.quaternion.setFromRotationMatrix(oscillationPlaneMatrix);
+  oscillationPlane.position.copy(worldDown).multiplyScalar(2.5);
 }
 
 updatePivotTransform();
 scene.add(pivotGroup);
-
-let angle = 0;
 
 function animate() {
   requestAnimationFrame(animate);
@@ -129,7 +175,6 @@ function animate() {
 
   angle += 0.02;
   updatePivotTransform();
-  pendulumGroup.rotation.x = Math.sin(angle) * 0.3;
 
   controls.update();
   renderer.render(scene, camera);
