@@ -3,8 +3,10 @@ import { createSceneContext, attachResize } from './src/setupScene.js';
 import { createEarth } from './src/earth.js';
 import { createPendulum } from './src/pendulum.js';
 import { animateScene } from './src/animation.js';
+import { applyMilkyWayBackground } from './src/starfield.js';
 
 const { scene, camera, renderer, controls } = createSceneContext();
+applyMilkyWayBackground(scene);
 
 const { earth, northPoleMarker, earthRadius } = createEarth(6);
 scene.add(earth);

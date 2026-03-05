@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export function animateScene({
   clock,
   earth,
@@ -12,7 +14,7 @@ export function animateScene({
   scene,
   camera,
 }) {
-  const rotationAxis = { x: 0, y: 1, z: 0 };
+  const rotationAxis = new THREE.Vector3(0, 1, 0);
 
   function animate() {
     requestAnimationFrame(animate);

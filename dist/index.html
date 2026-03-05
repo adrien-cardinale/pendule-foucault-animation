@@ -30,8 +30,23 @@
     .controls input {
       width: 220px;
     }
+
+    .controls input[type="checkbox"] {
+      width: auto;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .checkbox-row label {
+      margin-bottom: 0;
+    }
   </style>
-  <script type="module" crossorigin src="/pendule-foucault-animation/assets/index-OmQ90nxd.js"></script>
+  <script type="module" crossorigin src="/pendule-foucault-animation/assets/index-CSa2k6Vs.js"></script>
 </head>
 
 <body>
@@ -40,6 +55,10 @@
     <input id="latitude-slider" type="range" min="-90" max="90" step="1" value="47">
     <label for="longitude-slider">Longitude: <span id="longitude-value">0°</span></label>
     <input id="longitude-slider" type="range" min="-180" max="180" step="1" value="0">
+    <div class="checkbox-row">
+      <input id="lock-camera-rotation" type="checkbox">
+      <label for="lock-camera-rotation">Lock caméra sur rotation terrestre</label>
+    </div>
   </div>
 </body>
 
