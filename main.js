@@ -15,6 +15,9 @@ document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 
 const textureLoader = new THREE.TextureLoader();
+const earthNightMapUrl = new URL('./textures/8k_earth_nightmap.jpg', import.meta.url).href;
+const earthNormalMapUrl = new URL('./textures/earth_normal.png', import.meta.url).href;
+const earthSpecularMapUrl = new URL('./textures/earth_specular.png', import.meta.url).href;
 
 // Fond étoilé
 const starCount = 4000;
@@ -51,10 +54,10 @@ scene.add(stars);
 // Terre
 const earthGeometry = new THREE.SphereGeometry(8, 64, 64);
 const earthMaterial = new THREE.MeshPhongMaterial({
-  map:     textureLoader.load('textures/8k_earth_nightmap.jpg'),
-  normalMap: textureLoader.load('textures/earth_normal.png'),
+  map:     textureLoader.load(earthNightMapUrl),
+  normalMap: textureLoader.load(earthNormalMapUrl),
   normalScale: new THREE.Vector2(0.85, 0.85),
-  specularMap: textureLoader.load('textures/earth_specular.png'),
+  specularMap: textureLoader.load(earthSpecularMapUrl),
   specular: new THREE.Color(0x333333),
 });
 const earth = new THREE.Mesh(earthGeometry, earthMaterial);
