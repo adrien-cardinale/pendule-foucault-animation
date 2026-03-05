@@ -5,10 +5,13 @@ import { createPendulum } from './src/pendulum.js';
 import { animateScene } from './src/animation.js';
 import { applyMilkyWayBackground } from './src/starfield.js';
 
-const { scene, camera, renderer, controls } = createSceneContext();
-applyMilkyWayBackground(scene);
+const lowPerformanceMode = (navigator.deviceMemory && navigator.deviceMemory <= 2)
+  || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
 
-const { earth, northPoleMarker, earthRadius } = createEarth(6);
+const { scene, camera, renderer, controls } = createSceneContext();
+applyMilkyWayBackground(scene, { lowPerformance: lowPerformanceMode });
+
+const { earth, northPoleMarker, earthRadius } = createEarth(6, { lowPerformance: lowPerformanceMode });
 scene.add(earth);
 scene.add(northPoleMarker);
 

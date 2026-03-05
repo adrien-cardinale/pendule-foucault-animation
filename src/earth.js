@@ -1,22 +1,41 @@
 import * as THREE from 'three';
 
-export function createEarth(earthRadius = 6) {
+export function createEarth(earthRadius = 6, options = {}) {
+  const { lowPerformance = false } = options;
   const textureLoader = new THREE.TextureLoader();
-  const dayMapUrl = new URL('../textures/earth_daymap.jpg', import.meta.url).href;
+  const lowDayMapUrl = new URL('../textures/8k_earth_daymap.jpg', import.meta.url).href;
+  const highDayMapUrl = new URL('../textures/earth_daymap.jpg', import.meta.url).href;
   const normalMapUrl = new URL('../textures/earth_normal.png', import.meta.url).href;
 
-  const dayMap = textureLoader.load(dayMapUrl);
+  const dayMap = textureLoader.load(lowDayMapUrl);
   dayMap.colorSpace = THREE.SRGBColorSpace;
-  const normalMap = textureLoader.load(normalMapUrl);
+  dayMap.minFilter = THREE.LinearMipmapLinearFilter;
+  dayMap.magFilter = THREE.LinearFilter;
+
+  const material = new THREE.MeshPhongMaterial({
+    map: dayMap,
+    shininess: 25,
+  });
+
+  if (!lowPerformance) {
+    textureLoader.load(highDayMapUrl, (highDayMap) => {
+      highDayMap.colorSpace = THREE.SRGBColorSpace;
+      highDayMap.minFilter = THREE.LinearMipmapLinearFilter;
+      highDayMap.magFilter = THREE.LinearFilter;
+      material.map = highDayMap;
+      material.needsUpdate = true;
+    });
+
+    textureLoader.load(normalMapUrl, (normalMap) => {
+      material.normalMap = normalMap;
+      material.normalScale = new THREE.Vector2(0.85, 0.85);
+      material.needsUpdate = true;
+    });
+  }
 
   const earth = new THREE.Mesh(
     new THREE.SphereGeometry(earthRadius, 64, 64),
-    new THREE.MeshPhongMaterial({
-      map: dayMap,
-      normalMap,
-      normalScale: new THREE.Vector2(0.85, 0.85),
-      shininess: 25,
-    })
+    material
   );
 
   const northPoleMarker = new THREE.Mesh(
