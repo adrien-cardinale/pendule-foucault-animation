@@ -16,8 +16,8 @@ const latitudeSlider = document.getElementById('latitude-slider');
 const latitudeValue = document.getElementById('latitude-value');
 const longitudeSlider = document.getElementById('longitude-slider');
 const longitudeValue = document.getElementById('longitude-value');
-const lockCameraRotationCheckbox = document.getElementById('lock-camera-rotation');
 const resetYverdonButton = document.getElementById('reset-yverdon-button');
+const cameraModeInputs = document.querySelectorAll('input[name="camera-mode"]');
 
 const yverdonLatitude = 46.7785;
 const yverdonLongitude = 6.6412;
@@ -32,7 +32,7 @@ const maxAngle = THREE.MathUtils.degToRad(14);
 const oscillationSpeed = 1.4;
 const earthSpinSpeed = 0.0015;
 
-let lockCameraToEarthRotation = Boolean(lockCameraRotationCheckbox?.checked);
+let cameraMode = 'free';
 
 let latitude = Number(latitudeSlider?.value ?? 47);
 let longitude = Number(longitudeSlider?.value ?? 0);
@@ -92,12 +92,20 @@ if (longitudeSlider) {
   });
 }
 
-if (lockCameraRotationCheckbox) {
-  lockCameraRotationCheckbox.addEventListener('change', (event) => {
-    lockCameraToEarthRotation = event.target.checked;
-    controls.enabled = !lockCameraToEarthRotation;
+cameraModeInputs.forEach((input) => {
+  if (input.checked) {
+    cameraMode = input.value;
+  }
+
+  input.addEventListener('change', (event) => {
+    if (!event.target.checked) {
+      return;
+    }
+
+    cameraMode = event.target.value;
+    controls.enabled = cameraMode !== 'pendulum';
   });
-}
+});
 
 if (resetYverdonButton) {
   resetYverdonButton.addEventListener('click', () => {
@@ -105,7 +113,7 @@ if (resetYverdonButton) {
   });
 }
 
-controls.enabled = !lockCameraToEarthRotation;
+controls.enabled = cameraMode !== 'pendulum';
 
 updateControlLabels();
 
@@ -168,7 +176,8 @@ animateScene({
   maxAngle,
   oscillationSpeed,
   earthSpinSpeed,
-  shouldLockCamera: () => lockCameraToEarthRotation,
+  shouldLockCamera: () => cameraMode === 'pendulum',
+  shouldFollowEarthRotation: () => cameraMode === 'earth',
   onLockedCameraUpdate: updateLockedCameraFromPendulum,
   onFrame: updatePendulumPlacement,
   controls,
