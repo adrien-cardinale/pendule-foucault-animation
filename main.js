@@ -19,6 +19,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 const latitudeSlider = document.getElementById('latitude-slider');
 const latitudeValue = document.getElementById('latitude-value');
 const lockCameraCheckbox = document.getElementById('lock-camera-checkbox');
+const toggleMapButton = document.getElementById('toggle-map-button');
+const togglePlaneButton = document.getElementById('toggle-plane-button');
 const timeDisplay = document.getElementById('time-display');
 
 if (lockCameraCheckbox) {
@@ -36,9 +38,12 @@ if (lockCameraCheckbox) {
 }
 
 const textureLoader = new THREE.TextureLoader();
-const earthNightMapUrl = new URL('./textures/8k_earth_daymap.jpg', import.meta.url).href;
+const earthDayMapUrl = new URL('./textures/8k_earth_daymap.jpg', import.meta.url).href;
+const earthNightMapUrl = new URL('./textures/8k_earth_nightmap.jpg', import.meta.url).href;
 const earthNormalMapUrl = new URL('./textures/earth_normal.png', import.meta.url).href;
 const earthSpecularMapUrl = new URL('./textures/earth_specular.png', import.meta.url).href;
+const earthDayMap = textureLoader.load(earthDayMapUrl);
+const earthNightMap = textureLoader.load(earthNightMapUrl);
 
 // Fond étoilé
 const starCount = 4000;
@@ -75,7 +80,7 @@ scene.add(stars);
 // Terre
 const earthGeometry = new THREE.SphereGeometry(8, 64, 64);
 const earthMaterial = new THREE.MeshPhongMaterial({
-  map:     textureLoader.load(earthNightMapUrl),
+  map:     earthDayMap,
   normalMap: textureLoader.load(earthNormalMapUrl),
   normalScale: new THREE.Vector2(0.85, 0.85),
   specularMap: textureLoader.load(earthSpecularMapUrl),
@@ -185,6 +190,8 @@ const candidateLocalEast = new THREE.Vector3();
 const fallbackReferenceAxis = new THREE.Vector3(1, 0, 0);
 const localPendulumDown = new THREE.Vector3(0, -1, 0);
 let angle = 0;
+let isNightMap = false;
+let isOscillationPlaneVisible = true;
 
 function setLatitude(nextLatitude) {
   latitude = nextLatitude;
@@ -258,6 +265,42 @@ function updateAnchorLocalVectors() {
 }
 
 setLatitude(latitude);
+
+function updateMapButtonLabel() {
+  if (!toggleMapButton) {
+    return;
+  }
+
+  toggleMapButton.textContent = isNightMap ? 'Map: Nuit' : 'Map: Jour';
+}
+
+function updatePlaneButtonLabel() {
+  if (!togglePlaneButton) {
+    return;
+  }
+
+  togglePlaneButton.textContent = isOscillationPlaneVisible ? 'Plan: ON' : 'Plan: OFF';
+}
+
+if (toggleMapButton) {
+  toggleMapButton.addEventListener('click', () => {
+    isNightMap = !isNightMap;
+    earthMaterial.map = isNightMap ? earthNightMap : earthDayMap;
+    earthMaterial.needsUpdate = true;
+    updateMapButtonLabel();
+  });
+  updateMapButtonLabel();
+}
+
+if (togglePlaneButton) {
+  togglePlaneButton.addEventListener('click', () => {
+    isOscillationPlaneVisible = !isOscillationPlaneVisible;
+    oscillationPlane.visible = isOscillationPlaneVisible;
+    updatePlaneButtonLabel();
+  });
+  oscillationPlane.visible = isOscillationPlaneVisible;
+  updatePlaneButtonLabel();
+}
 
 if (latitudeSlider) {
   latitudeSlider.addEventListener('input', (event) => {
