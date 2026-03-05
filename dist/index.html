@@ -31,20 +31,15 @@
       width: 220px;
     }
   </style>
-  <script type="module" crossorigin src="/pendule-foucault-animation/assets/index-BV2KbO_-.js"></script>
+  <script type="module" crossorigin src="/pendule-foucault-animation/assets/index-OmQ90nxd.js"></script>
 </head>
 
 <body>
   <div class="controls">
     <label for="latitude-slider">Latitude: <span id="latitude-value">47°</span></label>
     <input id="latitude-slider" type="range" min="-90" max="90" step="1" value="47">
-    <div style="display: flex; align-items: center; gap: 2px;">
-      <label for="lock-camera-checkbox">Lock camera to pendulum coordinates</label>
-      <input id="lock-camera-checkbox" type="checkbox" checked>
-    </div>
-    <button id="toggle-map-button" type="button">Map: Jour</button>
-    <button id="toggle-plane-button" type="button">Plan: ON</button>
-    <label for="time-display">Time: <span id="time-display">00:00:00</span></label>
+    <label for="longitude-slider">Longitude: <span id="longitude-value">0°</span></label>
+    <input id="longitude-slider" type="range" min="-180" max="180" step="1" value="0">
   </div>
 </body>
 
