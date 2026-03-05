@@ -6,6 +6,8 @@ const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerH
 camera.position.z = 10;
 camera.position.x = 30;
 
+const cameraFollowsEarthRotation = true;
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -89,6 +91,7 @@ function createDashedAxisLine(direction, color) {
 const orbitalNormalAxis = createDashedAxisLine(new THREE.Vector3(0, 1, 0), 0x00ff00);
 const earthRotationAxisDirection = new THREE.Vector3(0, 1, 0).applyAxisAngle(new THREE.Vector3(0, 0, 1), earthTilt);
 const earthRotationAxis = createDashedAxisLine(earthRotationAxisDirection, 0xff0000);
+const earthSpinSpeed = 0.001;
 
 scene.add(orbitalNormalAxis);
 scene.add(earthRotationAxis);
@@ -203,7 +206,12 @@ scene.add(pivotGroup);
 
 function animate() {
   requestAnimationFrame(animate);
-  earth.rotation.y += 0.001;
+  earth.rotation.y += earthSpinSpeed;
+
+  if (cameraFollowsEarthRotation) {
+    camera.position.applyAxisAngle(earthRotationAxisDirection, earthSpinSpeed);
+    camera.up.applyAxisAngle(earthRotationAxisDirection, earthSpinSpeed);
+  }
 
   angle += 0.02;
   updatePivotTransform();
