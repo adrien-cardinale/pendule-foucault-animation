@@ -1,34 +1,44 @@
 import * as THREE from 'three';
+import { TIFFLoader } from 'three/addons/loaders/TIFFLoader.js';
 
 export function createEarth(earthRadius = 6, options = {}) {
-  const { lowPerformance = false } = options;
-  const textureLoader = new THREE.TextureLoader();
-  const lowDayMapUrl = new URL('../textures/8k_earth_daymap.jpg', import.meta.url).href;
-  const highDayMapUrl = new URL('../textures/earth_daymap.jpg', import.meta.url).href;
-  const normalMapUrl = new URL('../textures/earth_normal.png', import.meta.url).href;
+  const { lowPerformance = false, enableDetailMaps = false } = options;
 
-  const dayMap = textureLoader.load(lowDayMapUrl);
+  const textureQualityPrefix = lowPerformance ? '2k' : '8k';
+  const textureLoader = new THREE.TextureLoader();
+  const tiffLoader = new TIFFLoader();
+
+  const dayMapUrl = new URL(`../textures/${textureQualityPrefix}_earth_daymap.jpg`, import.meta.url).href;
+  const normalMapUrl = new URL(`../textures/${textureQualityPrefix}_earth_normal_map.tif`, import.meta.url).href;
+  const specularMapUrl = new URL(`../textures/${textureQualityPrefix}_earth_specular_map.tif`, import.meta.url).href;
+
+  const dayMap = textureLoader.load(dayMapUrl);
   dayMap.colorSpace = THREE.SRGBColorSpace;
-  dayMap.minFilter = THREE.LinearMipmapLinearFilter;
+  dayMap.minFilter = lowPerformance ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
   dayMap.magFilter = THREE.LinearFilter;
+  dayMap.generateMipmaps = !lowPerformance;
 
   const material = new THREE.MeshPhongMaterial({
     map: dayMap,
+    specular: new THREE.Color(0x333333),
     shininess: 25,
   });
 
-  if (!lowPerformance) {
-    textureLoader.load(highDayMapUrl, (highDayMap) => {
-      highDayMap.colorSpace = THREE.SRGBColorSpace;
-      highDayMap.minFilter = THREE.LinearMipmapLinearFilter;
-      highDayMap.magFilter = THREE.LinearFilter;
-      material.map = highDayMap;
+  if (enableDetailMaps) {
+    tiffLoader.load(normalMapUrl, (normalMap) => {
+      normalMap.minFilter = THREE.LinearFilter;
+      normalMap.magFilter = THREE.LinearFilter;
+      normalMap.generateMipmaps = false;
+      material.normalMap = normalMap;
+      material.normalScale = new THREE.Vector2(0.85, 0.85);
       material.needsUpdate = true;
     });
 
-    textureLoader.load(normalMapUrl, (normalMap) => {
-      material.normalMap = normalMap;
-      material.normalScale = new THREE.Vector2(0.85, 0.85);
+    tiffLoader.load(specularMapUrl, (specularMap) => {
+      specularMap.minFilter = THREE.LinearFilter;
+      specularMap.magFilter = THREE.LinearFilter;
+      specularMap.generateMipmaps = false;
+      material.specularMap = specularMap;
       material.needsUpdate = true;
     });
   }
