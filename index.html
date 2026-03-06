@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Pendule de Foucault Animation</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    .controls {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-size: 14px;
+    }
+
+    .controls label {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .controls input {
+      width: 220px;
+    }
+
+    .controls input[type="checkbox"],
+    .controls input[type="radio"] {
+      width: auto;
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .option-row label {
+      margin-bottom: 0;
+    }
+
+    .controls button {
+      margin-top: 8px;
+      width: 100%;
+      padding: 6px 8px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+  <script type="module" crossorigin src="/pendule-foucault-animation/assets/index-jezs6amN.js"></script>
+</head>
+
+<body>
+  <div class="controls">
+    <label for="latitude-slider">Latitude: <span id="latitude-value">47°</span></label>
+    <input id="latitude-slider" type="range" min="-90" max="90" step="0.01" value="47">
+    <label for="longitude-slider">Longitude: <span id="longitude-value">0°</span></label>
+    <input id="longitude-slider" type="range" min="-180" max="180" step="0.01" value="0">
+    <div class="option-row">
+      <input id="camera-mode-free" name="camera-mode" type="radio" value="free" checked>
+      <label for="camera-mode-free">Caméra libre</label>
+    </div>
+    <div class="option-row">
+      <input id="camera-mode-pendulum" name="camera-mode" type="radio" value="pendulum">
+      <label for="camera-mode-pendulum">Caméra liée au pendule</label>
+    </div>
+    <div class="option-row">
+      <input id="camera-mode-earth" name="camera-mode" type="radio" value="earth">
+      <label for="camera-mode-earth">Caméra suit rotation Terre</label>
+    </div>
+    <button id="reset-yverdon-button" type="button">Reset sur Yverdon-les-Bains</button>
+  </div>
+</body>
+
+</html>
